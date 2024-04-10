@@ -4,14 +4,13 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Users = require("../models/User")
 
-// const tokenVerify = require("../middlewares/auth");
-const { config } = require('dotenv');
 const tokenVerify = require('../middlewares/auth');
 const { default: mongoose } = require('mongoose');
 const decrypt = require("../utilities/decrypt")
 const encrypt = require("../utilities/encrypt")
 
 router.post('/', async (req, res) => {
+    console.log(new Date() + ":" + req.ip + "- POST: " + "users/ " + req.body);
     if (req.body.uname !== null && req.body.password !== null && req.body.email !== null &&
         req.body.uname !== "" && req.body.password !== "" && req.body.email !== "") {
 
@@ -41,6 +40,7 @@ router.post('/', async (req, res) => {
 })
 
 router.post('/login', async (req, res) => {
+    console.log(new Date() + ":" + req.ip + "- POST: " + "users/login " + JSON.stringify(req.body));
     if (req.body.uname !== null && req.body.password !== null &&
         req.body.uname !== "" && req.body.password !== "") {
 
@@ -50,7 +50,7 @@ router.post('/login', async (req, res) => {
         try {
 
             const user = await Users.findOne({ uname: await decrypt(req.body.uname) })
-            if (user.password == await decrypt(req.body.password)) {
+            if (user && user.password == await decrypt(req.body.password)) {
                 const token = await encrypt(jwt.sign({ id: user._id }, process.env.JWT_SECRETE, { expiresIn: '90d' }))
                 res.send({ token })
             } else {
@@ -72,7 +72,7 @@ router.post('/login', async (req, res) => {
 })
 
 router.get('/', tokenVerify, async (req, res) => {
-
+    console.log(new Date() + ":" + req.ip + "- GET: " + "users/" + req.User);
     const session = await mongoose.startSession()
     session.startTransaction()
     try {
@@ -94,9 +94,9 @@ router.get('/', tokenVerify, async (req, res) => {
 
 router.post('/test', async (req, res) => {
     res.send({
-        uname: await encrypt("kedarayare"),
+        uname: await encrypt("Kedarayare"),
         email: await encrypt("kedar@ayare.com"),
-        password: await encrypt("kedarayare")
+        password: await encrypt("Kedarayare@2000")
     })
 })
 

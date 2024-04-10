@@ -1,12 +1,9 @@
 const express = require('express');
 
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const Users = require("../models/User")
 const Acro = require("../models/Acro")
 
-// const tokenVerify = require("../middlewares/auth");
-const { config } = require('dotenv');
 const tokenVerify = require('../middlewares/auth');
 const { default: mongoose } = require('mongoose');
 const decrypt = require("../utilities/decrypt")
@@ -15,6 +12,8 @@ const encrypt = require("../utilities/encrypt")
 
 
 router.post('/', tokenVerify, async (req, res) => {
+
+    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/" + req.body);
 
     var body = req.body
     if (body.acro !== null && body.full_form !== null && body.description !== null &&
@@ -52,7 +51,9 @@ router.post('/', tokenVerify, async (req, res) => {
 
 
 router.post('/like/:id', tokenVerify, async (req, res) => {
-    // console.log(req)
+
+    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/like/" + req.params.id);
+
     if (req.params.id !== null && req.params.id !== "") {
         const session = await mongoose.startSession()
         session.startTransaction()
@@ -86,7 +87,9 @@ router.post('/like/:id', tokenVerify, async (req, res) => {
 })
 
 router.post('/dislike/:id', tokenVerify, async (req, res) => {
-    // console.log(req)
+
+    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/dislike/" + req.params.id);
+
     if (req.params.id !== null && req.params.id !== "") {
         const session = await mongoose.startSession()
         session.startTransaction()
@@ -120,6 +123,9 @@ router.post('/dislike/:id', tokenVerify, async (req, res) => {
 })
 
 router.get('/search/:id', tokenVerify, async (req, res) => {
+
+    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/search/" + req.params.id);
+
     const str = req.params.id.toLowerCase()
     var acros = await Acro.find({
         $or: [
