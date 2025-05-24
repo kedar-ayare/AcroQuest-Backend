@@ -6,49 +6,68 @@ const Acro = require("../models/Acro")
 
 const tokenVerify = require('../middlewares/auth');
 const { default: mongoose } = require('mongoose');
-const decrypt = require("../utilities/decrypt")
-const encrypt = require("../utilities/encrypt")
+const encrypt = require("../utilities/encrypt");
+const validate = require('../middlewares/validation');
+
+const {newUserSchema, loginUserSchema, newAcroSchema} = require("../models/inputValidation")
 
 
-
-router.post('/', tokenVerify, async (req, res) => {
+/*
+POST - /
+To post a new Acronym.
+Requires:
+    - acro - Acronym
+    - full_form - Full Form of the Acronym
+    - description - description of the Acronym
+*/
+router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
 
     console.log(new Date() + ":" + req.ip + "- POST: " + "acro/" + req.body);
 
     var body = req.body
-    if (body.acro !== null && body.full_form !== null && body.description !== null &&
-        body.acro !== "" && body.full_form !== "" && body.description !== "") {
-        const session = await mongoose.startSession()
-        session.startTransaction()
+    const session = await mongoose.startSession()
+    session.startTransaction()
 
-        try {
-            const newAcro = Acro({
-                acro: await decrypt(req.body.acro),
-                full_form: await decrypt(req.body.full_form),
-                description: await decrypt(req.body.description),
-                author: req.User
-            })
-            newAcro.save()
-            await Users.findOneAndUpdate(
-                { _id: req.User },
-                {
-                    $push: { contri: newAcro._id }
-                }
-            )
-            res.send({ err: "OK" })
-        } catch (err) {
-            console.log(err)
-            session.abortTransaction()
-            res.send({ err: "NewAcro-02" })
-        }
-        session.endSession()
+    try {
 
-    } else {
-        res.send({ err: "NewAcro-01" })
+        // Creating the new Acro document in Mongo
+        const newAcro = Acro({
+            acro: req.body.acro,
+            full_form: req.body.full_form,
+            description: req.body.description,
+            author: req.User
+        })
+        await newAcro.save({session})
+
+        // Adding the new Acro Document Id to submitting User's 'contri' field
+        await Users.findOneAndUpdate(
+            { _id: req.User },
+            {
+                $push: { contri: newAcro._id }
+            },
+            {
+                session,
+                new: true
+            }
+        )
+        session.commitTransaction()
+        res.send({ success: true })
+    } catch (err) {
+        console.log(err)
+        session.abortTransaction()
+        res.send({ success: false, err: "NewAcro-03", msg: "Error Saving the New Acronym" })
     }
+    session.endSession()
 
 })
 
+
+/*
+POST - /like/:id
+To like an new Acronym.
+Requires:
+    - id: Id of the post to be liked
+*/
 
 router.post('/like/:id', tokenVerify, async (req, res) => {
 
@@ -58,33 +77,51 @@ router.post('/like/:id', tokenVerify, async (req, res) => {
         const session = await mongoose.startSession()
         session.startTransaction()
         try {
+
+            // Incrementing like count and adding user id to 'likedby' field
             await Acro.findOneAndUpdate(
                 { _id: req.params.id },
                 {
                     $inc: { likes: 1 },
                     $push: { likedby: req.User }
                 },
-                { new: true }
+                { 
+                    session,
+                    new: true 
+                }
 
             )
 
+            // Adding Acro Document Id to user's 'liked' field
             await Users.findOneAndUpdate(
                 { _id: req.User },
                 {
                     $push: { liked: req.params.id }
                 },
-                { new: true }
+                { 
+                    session,
+                    new: true 
+                }
             )
-            res.send({ err: "OK" })
+            session.commitTransaction()
+            res.send({ success: true })
         } catch (err) {
             console.log(err)
             session.abortTransaction()
-            res.send({ err: "LikeError-02" })
+            res.send({ success: false, err: "LikeError-01", msg:  "Post Id missing"})
         }
     } else {
-        res.send({ err: "LikeError-01" })
+        res.send({success: false, err: "LikeError-02", msg: "Error in interacting with the post" })
     }
 })
+
+
+/*
+POST - /dislike/:id
+To like an new Acronym.
+Requires:
+    - id: Id of the post to be disliked
+*/
 
 router.post('/dislike/:id', tokenVerify, async (req, res) => {
 
@@ -94,67 +131,93 @@ router.post('/dislike/:id', tokenVerify, async (req, res) => {
         const session = await mongoose.startSession()
         session.startTransaction()
         try {
+
+            // Decrementing like count and removing user id from 'likedby' field
             await Acro.findOneAndUpdate(
                 { _id: req.params.id },
                 {
                     $inc: { likes: -1 },
                     $pull: { likedby: req.User }
                 },
-                { new: true }
+                { 
+                    session,
+                    new: true 
+                }
 
             )
 
+            // Removing Acro Document Id from user's 'liked' field
             await Users.findOneAndUpdate(
                 { _id: req.User },
                 {
                     $pull: { liked: req.params.id }
                 },
-                { new: true }
+                { 
+                    session,
+                    new: true 
+                }
             )
-            res.send({ err: "OK" })
+            session.commitTransaction()
+            res.send({ success: true })
         } catch (err) {
             console.log(err)
             session.abortTransaction()
-            res.send({ err: "LikeError-02" })
+            res.send({success: false, err: "LikeError-01", msg: "Post Id missing" })
         }
     } else {
-        res.send({ err: "LikeError-01" })
+        res.send({ success: false, err: "LikeError-02", msg: "Error in interacting with the post" })
     }
 })
+
+
+/*
+POST - /search/:id
+To search an Acronym.
+Requires:
+    - id: search string as past of the url parameter
+*/
 
 router.get('/search/:id', tokenVerify, async (req, res) => {
 
     console.log(new Date() + ":" + req.ip + "- POST: " + "acro/search/" + req.params.id);
 
-    const str = req.params.id.toLowerCase()
-    var acros = await Acro.find({
-        $or: [
-            { acro: { $regex: str, $options: 'i' } },
-            { full_form: { $regex: str, $options: 'i' } },
-            { description: { $regex: str, $options: 'i' } }
-        ]
-    })
-    acros.sort((a, b) => {
-        if (a.acro.toLowerCase().includes(str)) return -1;
-        else if (b.acro.toLowerCase().includes(str)) return 1;
-        else if (a.full_form.toLowerCase().includes(str)) return -1;
-        else if (b.full_form.toLowerCase().includes(str)) return 1;
-        else if (a.description.toLowerCase().includes(str)) return -1;
-        else if (b.description.toLowerCase().includes(str)) return 1;
-        else return 0;
-    });
-    res.send({
-        err: "OK",
-        data: acros
-    })
+    if(req.params.id != null && req.params.id != "" && req.params.length > 1){
+        const str = req.params.id.toLowerCase()
+
+        try{
+
+            // Matching string with all fields in the Acro document
+            var acros = await Acro.find({
+                $or: [
+                    { acro: { $regex: str, $options: 'i' } },
+                    { full_form: { $regex: str, $options: 'i' } },
+                    { description: { $regex: str, $options: 'i' } }
+                ]
+            })
+
+            // Sorting it in the preference - Acro -> Full Form -> Description
+            acros.sort((a, b) => {
+                if (a.acro.toLowerCase().includes(str)) return -1;
+                else if (b.acro.toLowerCase().includes(str)) return 1;
+                else if (a.full_form.toLowerCase().includes(str)) return -1;
+                else if (b.full_form.toLowerCase().includes(str)) return 1;
+                else if (a.description.toLowerCase().includes(str)) return -1;
+                else if (b.description.toLowerCase().includes(str)) return 1;
+                else return 0;
+            });
+            res.send({
+                success: true,
+                data: acros
+            })
+        }catch(err){
+            console.log(err)
+            res.send({success:false,err: "SearchError-02", msg:"Error in searching the database" })
+        }
+        
+    }else{
+        res.send({success: false,error: "SearchError-01", msg: "Need Proper string to search"})
+    }
+    
 })
 
-
-router.post('/test', async (req, res) => {
-    res.send({
-        acro: await encrypt("UPSC"),
-        full_form: await encrypt("Union Public Service Commission"),
-        description: await encrypt("An entrance exam in India for public services job"),
-    })
-})
 module.exports = router
