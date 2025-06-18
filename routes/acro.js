@@ -6,10 +6,11 @@ const Acro = require("../models/Acro")
 
 const tokenVerify = require('../middlewares/auth');
 const { default: mongoose } = require('mongoose');
-const encrypt = require("../utilities/encrypt");
+const {encrypt, decrypt, getIV, getHashValue} = require("../utilities/encrypt");
 const validate = require('../middlewares/validation');
 
-const {newUserSchema, loginUserSchema, newAcroSchema} = require("../models/inputValidation")
+const {newUserSchema, loginUserSchema, newAcroSchema} = require("../models/inputValidation");
+const { getAESKey } = require('../utilities/sessionService');
 
 
 /*
@@ -24,19 +25,19 @@ router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
 
     console.log(new Date() + ":" + req.ip + "- POST: " + "acro/" + req.body);
 
-    var body = req.body
     const session = await mongoose.startSession()
     session.startTransaction()
-
+    console.log("here")
     try {
 
         // Creating the new Acro document in Mongo
         const newAcro = Acro({
-            acro: req.body.acro,
+            acro:  req.body.acro,
             full_form: req.body.full_form,
             description: req.body.description,
-            author: req.User
+            author: req.User,
         })
+
         await newAcro.save({session})
 
         // Adding the new Acro Document Id to submitting User's 'contri' field
@@ -50,14 +51,16 @@ router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
                 new: true
             }
         )
-        session.commitTransaction()
+        await session.commitTransaction()
         res.send({ success: true })
     } catch (err) {
         console.log(err)
         session.abortTransaction()
         res.send({ success: false, err: "NewAcro-03", msg: "Error Saving the New Acronym" })
+    } finally {
+        session.endSession()
     }
-    session.endSession()
+    
 
 })
 
@@ -181,7 +184,8 @@ router.get('/search/:id', tokenVerify, async (req, res) => {
 
     console.log(new Date() + ":" + req.ip + "- POST: " + "acro/search/" + req.params.id);
 
-    if(req.params.id != null && req.params.id != "" && req.params.length > 1){
+
+    if(req.params.id != null && req.params.id != "" && req.params.id.length > 1){
         const str = req.params.id.toLowerCase()
 
         try{

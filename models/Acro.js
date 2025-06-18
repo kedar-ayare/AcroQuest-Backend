@@ -5,10 +5,12 @@ const Acro = mongoose.Schema({
         type: String,
         required: true
     },
+
     full_form: {
         type: String,
         required: true
     },
+
     description: {
         type: String,
         required: true,

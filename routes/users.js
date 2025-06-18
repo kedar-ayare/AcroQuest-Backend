@@ -10,8 +10,8 @@ const {newUserSchema, loginUserSchema} = require("../models/inputValidation")
 
 const tokenVerify = require('../middlewares/auth');
 const { default: mongoose } = require('mongoose');
-const decrypt = require("../utilities/decrypt")
-const encrypt = require("../utilities/encrypt")
+
+const {encrypt, decrypt, getIV, getHashValue} = require("../utilities/encrypt")
 
 
 /*
@@ -24,23 +24,29 @@ Requires:
 */
 router.post('/', validate(newUserSchema),async (req, res) => {
     console.log(new Date() + ":" + req.ip + "- POST: " + "users/ " + req.body);
-
     const session = await mongoose.startSession();
     session.startTransaction();
-
+    const iv = getIV();
     try {
 
         // Creating New User document
-        const newUser = Users({
-            uname: req.body.uname,
-            password: req.body.password,
-            email: req.body.email
+        const newUser = await Users({
+            uname: encrypt(req.body.uname, iv, process.env.AESKey),
+            unameHash: getHashValue(req.body.uname),
+            unameIV: iv,
+
+            password: encrypt(req.body.password,iv,process.env.AESKey),
+            passwordIV: iv,
+
+            email: encrypt(req.body.email,iv,process.env.AESKey),
+            emailHash: getHashValue(req.body.email),
+            emailIV: iv,
         })
         await newUser.save({session});
         await session.commitTransaction();
 
         // Ecrypting and Sending User Token
-        const token = await encrypt(jwt.sign({ id: newUser._id }, process.env.JWT_SECRETE, { expiresIn: '90d' }))
+        const token = encrypt(jwt.sign({ id: newUser._id }, process.env.JWT_SECRETE, { expiresIn: '90d' }), iv, req.AESKey)
         res.send({ success: true, token })
         session.endSession()
     } catch (err) {
@@ -68,11 +74,11 @@ router.post('/login', validate(loginUserSchema) ,async (req, res) => {
     try {
 
         // Checks if user exists
-        const user = await Users.findOne({ uname:req.body.uname})
+        const user = await Users.findOne({ unameHash: getHashValue(req.body.uname)})
 
         // checks for user and password
-        if (user && user.password == req.body.password) {
-            const token = await encrypt(jwt.sign({ id: user._id }, process.env.JWT_SECRETE, { expiresIn: '90d' }))
+        if (user && decrypt(user.password, process.env.AESKey) == req.body.password) {
+            const token = encrypt(jwt.sign({ id: user._id }, process.env.JWT_SECRETE, { expiresIn: '90d' }), getIV(), req.AESKey)
             res.send({ success: true, token })
         } else {
             res.send({ success:false, error: "LogError-03", msg:  "No user found"})
@@ -101,13 +107,22 @@ router.get('/', tokenVerify, async (req, res) => {
     console.log(new Date() + ":" + req.ip + "- GET: " + "users/" + req.User);
     const session = await mongoose.startSession()
     session.startTransaction()
+    const iv = getIV();
     try {
 
         // Get's User document and populated the 'contri' field
-        const user = await Users.findOne({ _id: req.User }).populate("contri")
+        const user = await Users.findOne({ _id: req.User })
         if (user != null) {
-            const encryptedData = await encrypt(JSON.stringify(user))
-            res.send({success: true, encryptedData })
+            
+            const encryptedUser = {
+                uname: encrypt(decrypt(user.uname, process.env.AESKey, user.unameIV),iv, req.AESKey),
+                contri: user.contri,
+                email: encrypt(decrypt(user.email, process.env.AESKey, user.emailIV),iv, req.AESKey),
+            }
+
+
+
+            res.send({success: true, encryptedUser })
         } else {
             res.send({
                 success: false,
@@ -123,11 +138,15 @@ router.get('/', tokenVerify, async (req, res) => {
     session.endSession()
 })
 
-router.post('/test',validate(loginUserSchema),async (req, res) => {
+
+
+
+
+router.post('/test', async (req, res) => {
     res.send({
-        uname: await encrypt(req.body.uname),
+        uname: await encrypt("kedarayare"),
         email: await encrypt("kedar@ayare.com"),
-        password: await encrypt(req.body.password)
+        password: await encrypt("kedarayare")
     })
 })
 

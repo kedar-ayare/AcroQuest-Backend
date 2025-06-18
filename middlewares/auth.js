@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
-const decrypt = require("../utilities/decrypt")
+const { decrypt }= require("../utilities/encrypt")
+const { setUserId, getAESKey } = require('../utilities/sessionService');
 
 
 // To check for Tokens that are valid and not malformed
@@ -11,14 +12,17 @@ async function tokenVerify(req, res, next) {
         res.json({success: false, error: "ValError-01", msg: "No Token found"  })
     } else {
         try {
-
+            const AESKey = await getAESKey(req.headers.sessionid)
+            req.AESKey = AESKey
+            
             // Decrypting Token to validate
-            const attatchedToken = await decrypt(req.headers.token);
+            const attatchedToken = decrypt(req.headers.token, AESKey);
             try {
 
                 // Verifying Token wiht JWT_Secrete in .env
                 const decoded = jwt.verify(attatchedToken, process.env.JWT_SECRETE);
                 req.User = decoded.id;
+                setUserId(req.sessionId, req.User)
                 return next();
             } catch (err) {
                 console.log(err)
