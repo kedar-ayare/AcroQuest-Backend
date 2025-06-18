@@ -140,14 +140,4 @@ router.get('/', tokenVerify, async (req, res) => {
 
 
 
-
-
-router.post('/test', async (req, res) => {
-    res.send({
-        uname: await encrypt("kedarayare"),
-        email: await encrypt("kedar@ayare.com"),
-        password: await encrypt("kedarayare")
-    })
-})
-
 module.exports = router

@@ -3,18 +3,24 @@ const express = require('express');
 
 const router = express.Router();
 
-const {encryptRSA, decryptRSA} = require("../utilities/encrypt");
-const { storeSession, getAESKey } = require('../utilities/sessionService');
+const {decryptRSA} = require("../utilities/encrypt");
+const { storeSession} = require('../utilities/sessionService');
 
-// To send Server's Public Key to the User
+/*
+GET - /keys/
+To get Server's public RSA key.
+*/
 router.get('/', (req, res) => {
     res.send({ success: true, publicKey: process.env.RSA__Public_Key})
 })
 
 
-// Recieve's User's AES Key, encrypted by Server's Public Key
-// Decrypts it Using Server's Private Key and sotres in a session
-// Returns Session ID
+/*
+POST - /keys/
+Recieves User's AES key and returns a session ID
+Requires:
+    - AES: User's AES Key
+*/
 router.post('/',async (req, res) => {
     // Decrypt AES Key recieved
     const AESKey = decryptRSA(req.body.AES)

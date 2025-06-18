@@ -6,11 +6,9 @@ const Acro = require("../models/Acro")
 
 const tokenVerify = require('../middlewares/auth');
 const { default: mongoose } = require('mongoose');
-const {encrypt, decrypt, getIV, getHashValue} = require("../utilities/encrypt");
 const validate = require('../middlewares/validation');
 
-const {newUserSchema, loginUserSchema, newAcroSchema} = require("../models/inputValidation");
-const { getAESKey } = require('../utilities/sessionService');
+const {newAcroSchema} = require("../models/inputValidation");
 
 
 /*
@@ -27,7 +25,6 @@ router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
 
     const session = await mongoose.startSession()
     session.startTransaction()
-    console.log("here")
     try {
 
         // Creating the new Acro document in Mongo

@@ -8,8 +8,6 @@ const { getAESKey } = require('../utilities/sessionService');
 
 router.get('/', async (req, res)=> {
     const user = await Users.findOne({ _id:req.body.id})
-    // user["uname"] = await decrypt(user["uname"])
-    // user["password"] = await decrypt(user["password"])
     const iv = getIV()
     const AESKey= await getAESKey(req.headers.sessionid)
     const encrypted ={
@@ -23,7 +21,6 @@ router.get('/', async (req, res)=> {
     }
 
     res.send({encrypted})
-    // res.send()
 })
 
 
