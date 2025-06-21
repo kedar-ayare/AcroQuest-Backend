@@ -43,6 +43,5 @@ async function getAESKey(sessionId) {
 module.exports = {
     storeSession,
     getAESKey,
-    deleteSession,
     setUserId
 };

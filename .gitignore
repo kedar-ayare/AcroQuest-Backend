@@ -3,3 +3,7 @@
 Error.txt
 
 .env
+
+/utilities/private.pem
+
+/utilities/public.pem

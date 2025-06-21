@@ -26,9 +26,11 @@ router.get('/', async (req, res)=> {
 
 
 router.get('/getRSAEncryptedAES', async (req, res) => {
-    const encrypted = encryptRSA("kedarayare")
+    const encrypted = encryptRSA("AQpduXNLmopV5RyNY9yRUqT8+cCT948wAWYGenncTxM=")
     res.send({"RSAEncryptedAES": encrypted})
 })
+
+
 
 
 router.get('/testDecrypt', async (req, res) => {

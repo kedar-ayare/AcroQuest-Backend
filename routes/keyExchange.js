@@ -3,15 +3,17 @@ const express = require('express');
 
 const router = express.Router();
 
-const {decryptRSA} = require("../utilities/encrypt");
+const {decryptRSA, getKeys} = require("../utilities/encrypt");
 const { storeSession} = require('../utilities/sessionService');
+const fs = require('fs');
+const publicKey = fs.readFileSync('./utilities/public.pem', 'utf8');
 
 /*
 GET - /keys/
 To get Server's public RSA key.
 */
 router.get('/', (req, res) => {
-    res.send({ success: true, publicKey: process.env.RSA__Public_Key})
+    res.send({ success: true, publicKey: publicKey})
 })
 
 
