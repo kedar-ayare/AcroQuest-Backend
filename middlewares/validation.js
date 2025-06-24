@@ -13,8 +13,10 @@ const validate = (schema, property ='body') => {
         // Descrypts the Body to be validatedw
         const AESKey = await getAESKey(req.headers.sessionid)
         const decrypted = {}
-
+        console.log(AESKey)
+        console.log(req.body)
         for(const key in req[property]){
+            console.log(req[property][key], AESKey)
             decrypted[key] = decrypt(req[property][key], AESKey)
         }
         req.body = decrypted

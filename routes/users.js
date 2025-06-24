@@ -78,7 +78,7 @@ router.post('/login', validate(loginUserSchema) ,async (req, res) => {
 
         // checks for user and password
         if (user && decrypt(user.password, process.env.AESKey) == req.body.password) {
-            const token = encrypt(jwt.sign({ id: user._id }, process.env.JWT_SECRETE, { expiresIn: '90d' }), getIV(), req.AESKey)
+            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRETE, { expiresIn: '90d' })
             res.send({ success: true, token })
         } else {
             res.send({ success:false, error: "LogError-03", msg:  "No user found"})
@@ -89,7 +89,7 @@ router.post('/login', validate(loginUserSchema) ,async (req, res) => {
         session.abortTransaction()
         res.send({ success: false, error: "LogError-02" , msg: "Error Logging In"})
     }
-
+    
     session.endSession()
 
 })
@@ -122,7 +122,7 @@ router.get('/', tokenVerify, async (req, res) => {
 
 
 
-            res.send({success: true, encryptedUser })
+            res.send({success: true, user: encryptedUser })
         } else {
             res.send({
                 success: false,
@@ -137,7 +137,6 @@ router.get('/', tokenVerify, async (req, res) => {
     }
     session.endSession()
 })
-
 
 
 module.exports = router
