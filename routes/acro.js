@@ -206,9 +206,15 @@ router.get('/search/:id', tokenVerify, async (req, res) => {
                 else if (b.description.toLowerCase().includes(str)) return 1;
                 else return 0;
             });
+            const formatted = acros.map(acro => {
+                return {
+                    ...acro._doc,
+                    liked: acro.likedby.includes(req.User)
+                }
+            })
             res.send({
                 success: true,
-                data: acros
+                data: formatted
             })
         }catch(err){
             console.log(err)
