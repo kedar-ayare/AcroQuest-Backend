@@ -12,11 +12,14 @@ const validate = (schema, property ='body') => {
         }
         // Descrypts the Body to be validatedw
         const AESKey = await getAESKey(req.headers.sessionid)
+
+        if(!AESKey){
+            res.status(400).json({success:false, error: "Session Expired"})
+        }
+
         const decrypted = {}
-        console.log(AESKey)
-        console.log(req.body)
+
         for(const key in req[property]){
-            console.log(req[property][key], AESKey)
             decrypted[key] = decrypt(req[property][key], AESKey)
         }
         req.body = decrypted

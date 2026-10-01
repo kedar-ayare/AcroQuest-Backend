@@ -9,6 +9,7 @@ const { default: mongoose } = require('mongoose');
 const validate = require('../middlewares/validation');
 
 const {newAcroSchema} = require("../models/inputValidation");
+const RequestId = require('../middlewares/request');
 
 
 /*
@@ -18,10 +19,13 @@ Requires:
     - acro - Acronym
     - full_form - Full Form of the Acronym
     - description - description of the Acronym
+Sends:
+    - success: Request Success
+    - error: Error when processing the Request
 */
-router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
+router.post('/',RequestId,validate(newAcroSchema), tokenVerify, async (req, res) => {
 
-    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/" + req.body);
+    console.log(req.RequestId + ":" + req.ip + "- POST: " + "acro/" + req.body);
 
     const session = await mongoose.startSession()
     session.startTransaction()
@@ -35,6 +39,7 @@ router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
             author: req.User,
         })
 
+        // Saving the acro in Mongo DB
         await newAcro.save({session})
 
         // Adding the new Acro Document Id to submitting User's 'contri' field
@@ -48,12 +53,13 @@ router.post('/',validate(newAcroSchema), tokenVerify, async (req, res) => {
                 new: true
             }
         )
+
         await session.commitTransaction()
-        res.send({ success: true })
+        res.send({ success: true, error: null })
     } catch (err) {
-        console.log(err)
+        console.log(req.RequestId + ":" + req.ip + " - Error: "+err)
         session.abortTransaction()
-        res.send({ success: false, err: "NewAcro-03", msg: "Error Saving the New Acronym" })
+        res.send({ success: false, error: "NewAcro-03", msg: "Error Saving the New Acronym" })
     } finally {
         session.endSession()
     }
@@ -67,11 +73,14 @@ POST - /like/:id
 To like an new Acronym.
 Requires:
     - id: Id of the post to be liked
+Sends:
+    - success: Request Success
+    - error: Error when processing the Request
 */
 
-router.post('/like/:id', tokenVerify, async (req, res) => {
+router.post('/like/:id', RequestId,tokenVerify, async (req, res) => {
 
-    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/like/" + req.params.id);
+    console.log(req.RequestId + ":" + req.ip + "- POST: " + "acro/like/" + req.params.id);
 
     if (req.params.id !== null && req.params.id !== "") {
         const session = await mongoose.startSession()
@@ -103,15 +112,16 @@ router.post('/like/:id', tokenVerify, async (req, res) => {
                     new: true 
                 }
             )
+
             session.commitTransaction()
-            res.send({ success: true })
+            res.send({ success: true, error: null })
         } catch (err) {
-            console.log(err)
+            console.log(req.RequestId + ":" + req.ip + " - Error: "+err)
             session.abortTransaction()
-            res.send({ success: false, err: "LikeError-01", msg:  "Post Id missing"})
+            res.send({ success: false, error: "LikeError-01", msg:  "Post Id missing"})
         }
     } else {
-        res.send({success: false, err: "LikeError-02", msg: "Error in interacting with the post" })
+        res.send({success: false, error: "LikeError-02", msg: "Error in interacting with the post" })
     }
 })
 
@@ -121,11 +131,14 @@ POST - /dislike/:id
 To like an new Acronym.
 Requires:
     - id: Id of the post to be disliked
+Sends:
+    - success: Request Success
+    - error: Error when processing the Request
 */
 
-router.post('/dislike/:id', tokenVerify, async (req, res) => {
+router.post('/dislike/:id', RequestId,tokenVerify, async (req, res) => {
 
-    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/dislike/" + req.params.id);
+    console.log(req.RequestId + ":" + req.ip + "- POST: " + "acro/dislike/" + req.params.id);
 
     if (req.params.id !== null && req.params.id !== "") {
         const session = await mongoose.startSession()
@@ -158,14 +171,14 @@ router.post('/dislike/:id', tokenVerify, async (req, res) => {
                 }
             )
             session.commitTransaction()
-            res.send({ success: true })
+            res.send({ success: true, error:null })
         } catch (err) {
-            console.log(err)
+            console.log(req.RequestId + ":" + req.ip + " - Error: "+err)
             session.abortTransaction()
-            res.send({success: false, err: "LikeError-01", msg: "Post Id missing" })
+            res.send({success: false, error: "LikeError-01", msg: "Post Id missing" })
         }
     } else {
-        res.send({ success: false, err: "LikeError-02", msg: "Error in interacting with the post" })
+        res.send({ success: false, error: "LikeError-02", msg: "Error in interacting with the post" })
     }
 })
 
@@ -175,11 +188,15 @@ POST - /search/:id
 To search an Acronym.
 Requires:
     - id: search string as past of the url parameter
+Sends:
+    - success: Request Success
+    - error: Error when processing the Request
+    - data: All matching records found
 */
 
-router.get('/search/:id', tokenVerify, async (req, res) => {
+router.get('/search/:id', RequestId,tokenVerify, async (req, res) => {
 
-    console.log(new Date() + ":" + req.ip + "- POST: " + "acro/search/" + req.params.id);
+    console.log(req.RequestId + ":" + req.ip + "- POST: " + "acro/search/" + req.params.id);
 
 
     if(req.params.id != null && req.params.id != "" && req.params.id.length > 1){
@@ -214,11 +231,12 @@ router.get('/search/:id', tokenVerify, async (req, res) => {
             })
             res.send({
                 success: true,
-                data: formatted
+                data: formatted,
+                error: null
             })
         }catch(err){
-            console.log(err)
-            res.send({success:false,err: "SearchError-02", msg:"Error in searching the database" })
+            console.log(req.RequestId + ":" + req.ip + " - Error: "+err)
+            res.send({success:false,error: "SearchError-02", msg:"Error in searching the database" })
         }
         
     }else{

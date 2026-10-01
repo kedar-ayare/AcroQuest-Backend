@@ -6,24 +6,37 @@ const router = express.Router();
 const {decryptRSA, getKeys} = require("../utilities/encrypt");
 const { storeSession} = require('../utilities/sessionService');
 const fs = require('fs');
+const RequestId = require('../middlewares/request');
 const publicKey = fs.readFileSync('./utilities/public.pem', 'utf8');
 
 /*
 GET - /keys/
-To get Server's public RSA key.
+Sends Server's public RSA key to Requesting App
+Requires:
+Sends: 
+    - success: Request Success
+    - publicKey: Public RSA Key
 */
-router.get('/', (req, res) => {
+router.get('/', RequestId,(req, res) => {
+    console.log(req.RequestId + ":" + req.ip + "- GET: " + "/keys/");
     res.send({ success: true, publicKey: publicKey})
 })
 
 
 /*
 POST - /keys/
-Recieves User's AES key and returns a session ID
+Stores received AES key from requesting app
+and creates a session
 Requires:
     - AES: User's AES Key
+Sends:
+    - success: Request Success
+    - sessionId: Session Id
 */
-router.post('/',async (req, res) => {
+router.post('/',RequestId,async (req, res) => {
+
+    console.log(req.RequestId + ":" + req.ip + "- POST: " + "/keys/");
+    
     // Decrypt AES Key recieved
     const AESKey = decryptRSA(req.body.AES)
     

@@ -14,10 +14,9 @@ async function tokenVerify(req, res, next) {
         try {
             const AESKey = await getAESKey(req.headers.sessionid)
             req.AESKey = AESKey
-            console.log(req.AESKey)
+
             // Decrypting Token to validate
             const attatchedToken = req.headers.token;
-            console.log(attatchedToken)
             try {
 
                 // Verifying Token wiht JWT_Secrete in .env
