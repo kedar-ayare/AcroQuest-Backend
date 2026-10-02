@@ -18,7 +18,7 @@ async function storeSession(AES, req) {
         AES: AES,
     });
     session.save()
-    return sessionId;
+    return [sessionId, expiresAt];
 
 }
 

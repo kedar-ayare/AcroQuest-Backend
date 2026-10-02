@@ -7,6 +7,7 @@ const {decryptRSA, getKeys} = require("../utilities/encrypt");
 const { storeSession} = require('../utilities/sessionService');
 const fs = require('fs');
 const RequestId = require('../middlewares/request');
+const { error } = require('console');
 const publicKey = fs.readFileSync('./utilities/public.pem', 'utf8');
 
 /*
@@ -41,7 +42,8 @@ router.post('/',RequestId,async (req, res) => {
     const AESKey = decryptRSA(req.body.AES)
     
     // Send session Id
-    res.send({ success: true, sessionId: await storeSession(AESKey, req)})
+    const [sessionId, expiresAt] = await storeSession(AESKey, req)
+    res.send({ success: true, sessionId: sessionId, expiresAt:expiresAt, error: null})
 })
 
 
